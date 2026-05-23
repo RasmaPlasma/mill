@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 100" width="280" height="100">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&amp;display=swap');
+    .logo { font-family: 'Instrument Serif', Georgia, serif; }
+  </style>
+  <text x="0" y="72" font-size="72" letter-spacing="0.025em" fill="hsl(29.5, 100%, 88.04%)" class="logo">Mill</text>
+</svg>
