@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# uv
+.python-version
+
+# Alembic
+*.db
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ruff
+.ruff_cache/
+
+# Node.js (ui/)
+node_modules/
+.svelte-kit/
+build/
+.vite/
+
+# Docker
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Aegra
+aegra/
+!aegra/.gitkeep
+
+.agents
+.fallow
+.scratch

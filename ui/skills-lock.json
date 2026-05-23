@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "bun-cli": {
+      "source": "dmythro/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bun-cli/SKILL.md",
+      "computedHash": "b874d250ed0601469bd586dd0ba6dfbf2de3383a39ac4dfa22a8b67435a452dc"
+    }
+  }
+}

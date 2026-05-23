@@ -1,0 +1,10 @@
+{
+  "dependencies": ["./src"],
+  "graphs": {
+    "agent": "./src/factory/graph.py:graph"
+  },
+  "http": {
+    "app": "./src/custom_routes.py:app",
+    "enable_custom_route_auth": true
+  }
+}

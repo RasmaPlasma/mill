@@ -1,0 +1,160 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8.6.2-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  phoenix:
+    image: arizephoenix/phoenix:15.1.0
+    restart: unless-stopped
+    ports:
+      - "6006:6006"
+      - "4317:4317"
+    environment:
+      PHOENIX_PORT: 6006
+
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      EXEC: 1
+      IMAGES: 1
+      POST: 1
+      ALLOW_START: 1
+      ALLOW_STOP: 1
+      AUTH: 0
+      BUILD: 1
+      COMMIT: 0
+      CONFIGS: 0
+      DISTRIBUTION: 0
+      EVENTS: 1
+      GRPC: 0
+      INFO: 0
+      NETWORKS: 1
+      NODES: 0
+      PLUGINS: 0
+      SECRETS: 0
+      SERVICES: 0
+      SESSION: 0
+      SWARM: 0
+      SYSTEM: 0
+      TASKS: 0
+      VOLUMES: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  sandbox-service:
+    build: ./sandbox-service
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    environment:
+      PORT: 8090
+      DOCKER_HOST: tcp://docker-proxy:2375
+      SANDBOX_API_KEY: ${SANDBOX_API_KEY}
+      PLATFORM_URL: http://aegra:2026
+      DOCKER_RUNTIME: ${DOCKER_RUNTIME:-}
+      SANDBOX_DNS_SERVERS: ${SANDBOX_DNS_SERVERS:-}
+    depends_on:
+      - docker-proxy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import httpx; r = httpx.get('http://localhost:8090/health'); exit(0 if r.status_code == 200 else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  migrate-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "-c", "src/db/alembic.ini", "upgrade", "head"]
+    restart: "no"
+    volumes:
+      - ./src:/app/src:ro
+
+  aegra:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "2026:2026"
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_BROKER_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      SANDBOX_SERVICE_URL: http://sandbox-service:8090
+      SANDBOX_API_KEY: ${SANDBOX_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate-platform:
+        condition: service_completed_successfully
+      sandbox-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:2026/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./aegra.json:/app/aegra.json:ro
+      - ./src:/app/src:ro
+
+  hanoi-mcp:
+    build: ../hanoi-mcp
+    restart: unless-stopped
+
+  platform-ui:
+    build: ./ui
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      ORIGIN: ${PLATFORM_ORIGIN:-http://localhost:3000}
+      API_BASE_URL: ${API_BASE_URL:-http://aegra:2026}
+      DATABASE_URL: ${DATABASE_URL}
+      PLATFORM_MASTER_KEY: ${PLATFORM_MASTER_KEY}
+    depends_on:
+      aegra:
+        condition: service_healthy
+
+volumes:
+  pg_data:
+  redis_data:
